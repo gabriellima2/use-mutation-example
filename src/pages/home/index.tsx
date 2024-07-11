@@ -1,25 +1,16 @@
-import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 
+import { CreateTaskForm } from "./components/create-task-form"
+import { TaskPreview } from "./components/task-preview"
+import { Task } from "./components/task"
+
 import { client } from "../../lib/client"
+import { QUERY_KEYS } from "../../constants/query-keys"
 
-type Task = {
-  id: number
-  title: string
-  completed: boolean
-}
+import type { TaskEntity } from "../../entities/task.entity"
+import type { CreateTaskDTO, GetAllTasksDTO, ToggleTaskDTO } from "../../dtos/task.dto"
 
-type GetAllTasks = Task[]
-
-type CreateTask = Pick<Task, 'title'>
-
-const QUERY_KEYS = {
-  TASKS: {
-    GET_ALL: ['tasks']
-  }
-}
-
-let tasks: Task[] = [
+let tasks: TaskEntity[] = [
   {
     id: 1,
     title: 'delectus aut autem',
@@ -33,7 +24,7 @@ let tasks: Task[] = [
 ]
 
 function useTasks() {
-  const { data, ...query } = useQuery<GetAllTasks>({
+  const { data, ...query } = useQuery<GetAllTasksDTO>({
     queryKey: QUERY_KEYS.TASKS.GET_ALL,
     queryFn: async () => {
       return new Promise((resolve) => {
@@ -48,10 +39,10 @@ function useTasks() {
 
 function useCreateTask() {
   return useMutation({
-    mutationFn: (task: CreateTask) => {
+    mutationFn: (task: CreateTaskDTO) => {
       return new Promise((resolve) => {
         setTimeout(() => {
-          const createdTask: Task = { id: Math.random(), completed: false, ...task } 
+          const createdTask: TaskEntity = { id: Math.random(), completed: false, ...task } 
           tasks.push(createdTask)
           resolve(createdTask)
         }, 1000)
@@ -61,26 +52,9 @@ function useCreateTask() {
   })
 }
 
-function CreateTaskForm(props: { handleCreate: (title: string) => void }) {
-  const [title, setTitle] = useState('')
-  return (
-    <form onSubmit={(e) => {
-      e.preventDefault()
-      props.handleCreate(title)
-    }}>
-      <input
-        type="text"
-        placeholder="Task title"
-        value={title} onChange={(e) => setTitle(e.target.value)}
-      />
-      <button type="submit">Create</button>
-    </form>
-  )
-}
-
 function useToggleTask() {
   return useMutation({
-    mutationFn: (taskId: number) => {
+    mutationFn: (taskId: ToggleTaskDTO) => {
       return new Promise((resolve) => {
         setTimeout(() => {
           const updatedTasks = tasks?.map((task) => {
@@ -106,25 +80,13 @@ export function Home() {
       {tasks && (
         <ul>
           {tasks.map((task) => (
-            <li key={task.id}>
-              <button
-                disabled={toggleTask.isPending && task.id === toggleTask.variables}
-                onClick={() => toggleTask.mutate(task.id)}
-                style={{
-                  textDecoration:
-                    task.completed || (toggleTask.isPending && task.id === toggleTask.variables) ? 'line-through' : 'none',
-                  backgroundColor: 'transparent',
-                  padding: '4px 12px',
-                  opacity: toggleTask.isPending && task.id === toggleTask.variables ? 0.5 : 1
-                }}
-              >
-                {task.title}
-              </button>
-            </li>
+            <Task
+              {...task}
+              isPending={toggleTask.isPending && task.id === toggleTask.variables}
+              handleToggle={toggleTask.mutate}
+            />
           ))}
-          {createTask.isPending && (
-            <li style={{ opacity: 0.5 }}>{createTask.variables.title}</li>
-          )}
+          {createTask.isPending && <TaskPreview title={createTask.variables.title} />}
         </ul>
       )}
     </div>
