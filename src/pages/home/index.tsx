@@ -3,23 +3,23 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 
 import { client } from "../../lib/client"
 
-type Post = {
+type Task = {
   id: number
   title: string
   completed: boolean
 }
 
-type GetAllPosts = Post[]
+type GetAllTasks = Task[]
 
-type CreatePost = Pick<Post, 'title'>
+type CreateTask = Pick<Task, 'title'>
 
 const QUERY_KEYS = {
-  POSTS: {
-    GET_ALL: ['posts']
+  TASKS: {
+    GET_ALL: ['tasks']
   }
 }
 
-const posts: Post[] = [
+let tasks: Task[] = [
   {
     id: 1,
     title: 'delectus aut autem',
@@ -32,36 +32,36 @@ const posts: Post[] = [
   },
 ]
 
-function usePosts() {
-  const { data, ...query } = useQuery<GetAllPosts>({
-    queryKey: QUERY_KEYS.POSTS.GET_ALL,
+function useTasks() {
+  const { data, ...query } = useQuery<GetAllTasks>({
+    queryKey: QUERY_KEYS.TASKS.GET_ALL,
     queryFn: async () => {
       return new Promise((resolve) => {
         setTimeout(() => {
-          resolve(posts)
+          resolve(tasks)
         }, 1000)
       })
     }
   })
-  return { posts: data, ...query }
+  return { tasks: data, ...query }
 }
 
-function useCreatePost() {
+function useCreateTask() {
   return useMutation({
-    mutationFn: (post: CreatePost) => {
+    mutationFn: (task: CreateTask) => {
       return new Promise((resolve) => {
         setTimeout(() => {
-          const createdPost: Post = { id: Math.random(), completed: false, ...post } 
-          posts.push(createdPost)
-          resolve(createdPost)
+          const createdTask: Task = { id: Math.random(), completed: false, ...task } 
+          tasks.push(createdTask)
+          resolve(createdTask)
         }, 1000)
       })
     },
-    onSettled: () => client.invalidateQueries({ queryKey: QUERY_KEYS.POSTS.GET_ALL }),
+    onSettled: () => client.invalidateQueries({ queryKey: QUERY_KEYS.TASKS.GET_ALL }),
   })
 }
 
-function CreatePostForm(props: { handleCreate: (title: string) => void }) {
+function CreateTaskForm(props: { handleCreate: (title: string) => void }) {
   const [title, setTitle] = useState('')
   return (
     <form onSubmit={(e) => {
@@ -70,7 +70,7 @@ function CreatePostForm(props: { handleCreate: (title: string) => void }) {
     }}>
       <input
         type="text"
-        placeholder="Post title"
+        placeholder="Task title"
         value={title} onChange={(e) => setTitle(e.target.value)}
       />
       <button type="submit">Create</button>
@@ -78,19 +78,52 @@ function CreatePostForm(props: { handleCreate: (title: string) => void }) {
   )
 }
 
+function useToggleTask() {
+  return useMutation({
+    mutationFn: (taskId: number) => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const updatedTasks = tasks?.map((task) => {
+            if (task.id !== taskId) return task
+            return { ...task, completed: !task.completed }
+          })
+          tasks = updatedTasks
+          resolve(updatedTasks)
+        }, 1000)
+      })
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: QUERY_KEYS.TASKS.GET_ALL }),
+  })
+}
+
 export function Home() {
-  const createPost = useCreatePost()
-  const { posts } = usePosts()
+  const createTask = useCreateTask()
+  const toggleTask = useToggleTask()
+  const { tasks } = useTasks()
   return (
     <div>
-      <CreatePostForm handleCreate={(title) => createPost.mutate({ title })} />
-      {posts && (
+      <CreateTaskForm handleCreate={(title) => createTask.mutate({ title })} />
+      {tasks && (
         <ul>
-          {posts.map((post) => (
-            <li key={post.id}>{post.title}</li>
+          {tasks.map((task) => (
+            <li key={task.id}>
+              <button
+                disabled={toggleTask.isPending && task.id === toggleTask.variables}
+                onClick={() => toggleTask.mutate(task.id)}
+                style={{
+                  textDecoration:
+                    task.completed || (toggleTask.isPending && task.id === toggleTask.variables) ? 'line-through' : 'none',
+                  backgroundColor: 'transparent',
+                  padding: '4px 12px',
+                  opacity: toggleTask.isPending && task.id === toggleTask.variables ? 0.5 : 1
+                }}
+              >
+                {task.title}
+              </button>
+            </li>
           ))}
-          {createPost.isPending && (
-            <li style={{ opacity: 0.5 }}>{createPost.variables.title}</li>
+          {createTask.isPending && (
+            <li style={{ opacity: 0.5 }}>{createTask.variables.title}</li>
           )}
         </ul>
       )}
