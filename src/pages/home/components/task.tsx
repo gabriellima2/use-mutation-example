@@ -20,7 +20,7 @@ export function Task(props: TaskProps) {
         disabled={isPending}
         onClick={() => handleToggle(id)}
         style={{
-          textDecoration: completed || (isPending) ? 'line-through' : 'none',
+          textDecoration: completed || isPending ? 'line-through' : 'none',
           backgroundColor: 'transparent',
           padding: '4px 12px',
           opacity: isPending ? 0.5 : 1
