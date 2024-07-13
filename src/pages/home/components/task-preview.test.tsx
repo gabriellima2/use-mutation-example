@@ -5,16 +5,20 @@ import { TaskPreview } from './task-preview'
 
 describe('<TaskPreview />', () => {
   it('should render correctly', () => {
-    renderComponent(defaultProps)
+    register.execute(defaultProps)
     expect(screen.getByText(defaultProps.title)).toBeTruthy()
   })
 })
 
 type Props = Parameters<typeof TaskPreview>[0]
 
-function renderComponent(props: Props) {
-  render(<TaskPreview {...props} />)
+class RegisterTaskPreview {
+  execute(props: Props) {
+    render(<TaskPreview {...props} />)
+  }
 }
+
+const register = new RegisterTaskPreview()
 
 const defaultProps: Props = {
   title: 'any_title'
